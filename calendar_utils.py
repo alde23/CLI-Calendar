@@ -59,7 +59,6 @@ def get_event_by_name_date(event_f, filename="data/events.json"):
             data = json.load(f)
             events = data.get("events", [])
 
-            event = []
 
 def finish_event(event_f, source_file="data/events.json", destination_file="data/finished.json"):
     if event_exists(event_f, source_file):
