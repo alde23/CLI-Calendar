@@ -1,74 +1,117 @@
-import calendar
 import json
+from datetime import date as dt
+from datetime import time as tm
 
 
-# Prints the inputted month as a text calendar
-def show_m(year, month):
-    print("")
-    calendar.prmonth(year, month)
+class Event:
+
+    def __init__(self, title, date, description="...", time="09:00", notification="08:00"):
+        self.title = title
+        self.description = description
+        self.date = date
+        self.time = time
+        self.notification = notification
+
+class Calendar:
+
+    def __init__(self):
+        self.events = []
+        self.events_is_loaded = False
+        self.finished = []
+        self.finished_is_loaded = False
+
+    def load_events_from_file(self, events_type="events"):
+        try:
+            if events_type == "events":
+                file_name = "data/events.json"
+                target_list = self.events
+                is_loaded_flag = "events_is_loaded"
+            elif events_type == "finished":
+                file_name = "data/finished.json"
+                target_list = self.finished
+                is_loaded_flag = "finished_is_loaded"
+            else:
+                raise FileNotFoundError
+
+        except FileNotFoundError:
+            print(f"The {events_type} file was not found.")
+            exit(1)
+
+        try:
+            with open (file_name, "r") as sf:
+                event_data = json.load(sf)
+
+                for event_f in event_data.get(events_type, []):
+                    event_l = Event(
+                        title = event_f["title"],
+                        description = event_f["description"],
+                        date = dt.fromisoformat(event_f["date"]),
+                        time = tm.fromisoformat(event_f["time"]),
+                        notification = event_f["notification"]
+                    )
+
+                    target_list.append(event_l)
+
+                if target_list:
+                    setattr(self, is_loaded_flag, True)
+        except FileNotFoundError:
+            print(f"The {events_type} file was not found.")
+        except json.JSONDecodeError:
+            print("Error decoding the JSON file.")
 
 
-# Prints the inputted year as a text calendar
-def show_y(year):
-    text_calendar = calendar.TextCalendar()
-    print("")
-    text_calendar.pryear(year)
+def add_new_event(self, event_a):
+    if not self.events_is_loaded:
+        exit(1)
+    elif not isinstance(event_a, Event):
+        exit(1)
+
+    self.events.append(event_a)
 
 
-# Appends json file with new task
-def add_event(event, filename="data/events.json"):
-    try:
-        # Load existing tasks from the JSON file
-        with open(filename, "r") as f:
-            data = json.load(f)
-            # Check if "events" key exists and is a list
-            if "events" not in data or not isinstance(data["events"], list):
-                data["events"] = []
-    except FileNotFoundError:
-        # If file does not exist, create the structure with an empty "events" list
-        data = {"events": []}
+def finish_event(self, event_f, to_delete=False):
+    if not self.events_is_loaded:
+        exit(1)
+    elif not self.finished_is_loaded:
+        exit(1)
+    elif not isinstance(event_f, Event):
+        exit(1)
 
-    # Append the new task to the "events" list
-    data["events"].append(event)
-
-    # Write the updated data back to the file
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=4)
+    for event in self.events:
+        if event.title == event_f.title and event.date == event_f.date and event.time == event_f.time:
+            if not to_delete:
+                self.finished.append(event)
+            self.events.remove(event)
+            return
 
 
-def event_exists(event_f, source_file="data/events.json"):
-    # Check if task is in data/events.json
-    try:
-        with open(source_file, "r") as sf:
-            data = json.load(sf)
-            events = data.get("events", [])
+def list_events(date_l, which_list):
 
-            for event in events:
-                if all(event.get(key) == value for key, value in event_f.items()):
-                    return True
+    events_of_the_day = []
+    for event in which_list:
+        if event.date is date_l:
+            events_of_the_day.append(event)
+        if len(events_of_the_day) < 1:
+            exit(1)
+    events_of_the_day.sort(key=events_of_the_day[0].time)
 
-            return False
+    print(f"Events for the date {date_l}")
 
-    except FileNotFoundError:
-        print(f"File '{source_file}' not found.")
-        return False
-
-def get_event_by_name_date(event_f, filename="data/events.json"):
-    try:
-        with open(filename, "r") as f:
-            data = json.load(f)
-            events = data.get("events", [])
+    for event in events_of_the_day:
+        print(f"{event.time} {event.title}")
 
 
-def finish_event(event_f, source_file="data/events.json", destination_file="data/finished.json"):
-    if event_exists(event_f, source_file):
-        with open(source_file, "r") as sf:
-            data = json.load(sf)
-            events = data.get("events", [])
 
-        # Get matching event(s)
-        events = [event for event in events if all(event.get(key) == value for key, value in event_f.items())]
 
-        add_event(event_f, destination_file)
+
+
+
+
+
+
+
+
+
+
 
 
