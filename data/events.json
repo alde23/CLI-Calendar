@@ -1,0 +1,11 @@
+{
+    "events": [
+        {
+            "title": "Example event",
+            "description": "Description...",
+            "date": "2024-11-15",
+            "time": "09:00:00",
+            "notification": "2024-11-15-07:00"
+        }
+    ]
+}
