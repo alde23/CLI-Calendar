@@ -4,11 +4,6 @@ from cli_utils import Calendar
 # instantiate a Calendar class object to handle main functionalities
 master_calendar = Calendar()
 
-# load all events from the files into memory for easier access
-master_calendar.load_events()
-master_calendar.load_finished()
-
-
 """ ADDING COMMANDS FOR THE INTERFACE OF THE PROGRAM """
 
 # Main parser for basic commands
@@ -85,7 +80,7 @@ match args.command:
     case "finish":
         master_calendar.finish_event(args)
     case "delete":
-        master_calendar.delete_event(args)
+        master_calendar.finish_event(args, to_delete=True)
     case "modify":
         master_calendar.modify_event(args)
     case "show":
@@ -96,4 +91,4 @@ match args.command:
         print("Error: Command not recognized")
 
 """ UPDATE THE DATABASES """
-#master_calendar.update_db()
+master_calendar.update_db()

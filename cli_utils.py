@@ -6,9 +6,7 @@ from datetime import timedelta
 from calendar import TextCalendar
 
 txt_cal = TextCalendar()
-
 current_year = dtm.now().year
-
 present_day = dtm.today()
 yesterday = present_day - timedelta(1)
 tomorrow = present_day + timedelta(1)
@@ -23,6 +21,16 @@ class Event:
         self.time = time
         self.notification = notification
 
+    def to_dict(self):
+        return {
+            "title": self.title,
+            "date": self.date,
+            "description": self.description,
+            "time": self.time,
+            "notification": self.notification
+        }
+
+
 class Calendar:
 
     def __init__(self):
@@ -31,124 +39,87 @@ class Calendar:
         self.events_is_loaded = False
         self.finished_is_loaded = False
 
-    def load_events(self):
-        file_name = "data/events.json"
-        type_name = "events"
+    def load_events(self, event_type="events"):
+        file_name = f"data/{event_type}.json"
+        if event_type == "events" and not self.events_is_loaded:
+            target_list = self.events
+        elif event_type == "finished" and not self.finished_is_loaded:
+            target_list = self.finished
+        else:
+            return
 
-        with open(file_name, 'r') as sf:
-            data = json.load(sf)
-            for event in data.get(type_name, []):
-                event_tba = Event(
-                    title = event["title"],
-                    description = event["description"],
-                    date = dt.fromisoformat(event["date"]),
-                    time = tm.fromisoformat(event["time"]),
-                    notification = event["notification"]
-                )
-
-                self.events.append(event_tba)
-
-            if len(self.events):
+        try:
+            with open(file_name, "r") as sf:
+                data = json.load(sf)
+                for event in data[event_type]:
+                    event_tba = Event(
+                        title=event["title"],
+                        date=event["date"],
+                        description=event["description"],
+                        time=event["time"],
+                        notification=event["notification"]
+                    )
+                    target_list.append(event_tba)
+            if event_type == "events":
                 self.events_is_loaded = True
-
-
-    def load_finished(self):
-        file_name = "data/finished.json"
-        type_name = "finished"
-
-        with open(file_name, 'r') as sf:
-            data = json.load(sf)
-            for event in data.get(type_name, []):
-                event_tba = Event(
-                    title = event["title"],
-                    description = event["description"],
-                    date = dt.fromisoformat(event["date"]),
-                    time = tm.fromisoformat(event["time"]),
-                    notification = event["notification"]
-                )
-
-                self.finished.append(event_tba)
-
-            if len(self.finished):
+            else:
                 self.finished_is_loaded = True
-
-
-    def print_events(self):
-        print("Loaded Events:")
-        for event in self.events:
-            print(
-                f"Title: {event.title}, Date: {event.date}, Time: {event.time}, Description: {event.description}, Notification: {event.notification}")
-
-        print("\nFinished Events:")
-        for event in self.finished:
-            print(
-                f"Title: {event.title}, Date: {event.date}, Time: {event.time}, Description: {event.description}, Notification: {event.notification}")
-
-
-    def already_exists(self, date, title):
-        for event in self.events:
-            if event.date == date and event.title == title:
-                print("Event title must be unique!!")
-                return True
-
+        except FileNotFoundError:
+            pass
 
     def add_event(self, args):
-        if not self.events_is_loaded:
-            exit(1)
-        if self.already_exists(args.date, args.title):
-            exit(1)
-        if args.description is None:
-            args.description = "No description..."
-        if args.time is None:
-            args.time = tm.fromisoformat("09:00")
+        self.load_events()
+        self.load_events("finished")
+        if self.events_is_loaded and self.finished_is_loaded:
+            for event in self.events:
+                if event.title == args.title and event.date == args.date:
+                    print("Error: Event with same title and date already exists")
+                    return
+            if args.description is None:
+                args.description = "No description..."
+            if args.time is None:
+                args.time = "09:00"
+            if args.notification is None:
+                args.notification = "07:00-{}".format(args.date)
+            new_event = Event(args.title, args.date, args.description, args.time, args.notification)
+            self.events.append(new_event)
+            return
+        print("Error: Failed to add event")
 
-        new_event = Event(
-            title = args.title,
-            description = args.description,
-            date = args.date,
-            time = args.time,
-            notification = args.notification
-        )
-
-        self.events.append(new_event)
-
-
-    def finish_event(self, args):
-        if not self.finished_is_loaded:
-            exit(1)
-        for event in self.events:
-            if event.title == args.title and event.date == args.date:
-                self.finished.append(event)
-                self.events.remove(event)
-
-    def delete_event(self, args):
-        if not self.finished_is_loaded:
-            exit(1)
-        for event in self.events:
-            if event.title == args.title and event.date == args.date:
-                self.events.remove(event)
-
+    def finish_event(self, args, to_delete=False):
+        self.load_events()
+        self.load_events("finished")
+        if self.events_is_loaded and self.finished_is_loaded:
+            for event in self.events:
+                if event.title == args.title and event.date == args.date:
+                    event_tbf = Event(event.title, event.date, event.description, event.time, event.notification)
+                    if to_delete:
+                        self.events.remove(event)
+                        return
+                    self.finished.append(event_tbf)
+                    self.events.remove(event)
+                    return
+            print("Error: Event not found")
 
     def modify_event(self, args):
-        if not self.events_is_loaded:
-            exit(1)
+        self.load_events()
         for event in self.events:
             if event.title == args.title and event.date == args.date:
-                if args.description:
-                    event.description = args.description
-                if args.time:
-                    event.time = args.time
-                if args.notification:
-                    event.notification = args.notification
                 if args.modify:
                     event.title = args.modify
                 if args.set:
-                    event.date = args.set
-                break
+                    event.date = args.date
+                if args.description:
+                    event.description == args.description
+                if args.time:
+                    event.time == args.time
+                if args.notification:
+                    event.notification == args.notification
+                return
+            print("Error: Event not found")
+            return
 
-
-    @staticmethod
-    def show_calendar(args):
+    def show_calendar(self, args):
         if args.year and args.month:
             txt_cal.prmonth(int(args.year), int(args.month))
         elif args.year:
@@ -158,40 +129,39 @@ class Calendar:
         else:
             txt_cal.pryear(current_year)
 
-
     def list_events(self, args):
-        current_events = []
+        self.load_events()
+        events_of = []
         if args.date is None:
-            args.date = present_day
+            date_of = present_day.strftime("%Y-%m-%d")
         else:
-            args.date = dt.fromisoformat(args.date)
-
+            date_of = args.date
         for event in self.events:
-            if event.date == args.date:
-                current_events.append(event)
+            if event.date == date_of:
+                events_of.append(event)
+        if not events_of:
+            print("No events for this date")
+            return
 
-        date_str = args.date.strftime("%Y-%m-%d")
-        print(f"Events for the date {date_str}")
-        print("")
-        for event_l in current_events:
-            time_str = event_l.time.strftime("%H:%M")
-            print(f"{time_str} {event_l.title} ")
+        # Sort events by time
+        events_of = sorted(events_of, key=lambda event: event.time)
 
-
-    def date_to_str(self):
-        for event in self.events:
-            event.date = event.date.strftime('%Y-%m-%d')
-            event.time = event.time.strftime('%H:%M')
-
-        for event_f in self.finished:
-            event_f.date = event_f.date.isoformat()
-            event_f.time = event_f.time.isoformat()
+        for event in events_of:
+            print(f"{event.time} - {event.title}")
 
     def update_db(self):
-        self.date_to_str()
-        data = {"events": [event.__dict__ for event in self.events]}
-        with open("data/events.json", "w") as f:
-            json.dump(data, f, indent=4)
-        data_f = {"finished": [finished.__dict__ for finished in self.finished]}
-        with open("data/finished.json", "w") as f:
-            json.dump(data_f, f, indent=4)
+        if not self.events_is_loaded and not self.finished_is_loaded:
+            print("Error: No events to update")
+            return
+        dict_listE = []
+        dict_listF = []
+        for event in self.events:
+            event_dict = event.to_dict()
+            dict_listE.append(event_dict)
+        for finish in self.finished:
+            finished_dict = finish.to_dict()
+            dict_listF.append(finished_dict)
+        with open("data/events.json", "w") as ef:
+            json.dump({"events": dict_listE}, ef, indent=4)
+        with open("data/finished.json", "w") as ff:
+            json.dump({"finished": dict_listF}, ff, indent=4)
