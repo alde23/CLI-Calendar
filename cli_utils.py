@@ -105,6 +105,7 @@ class Calendar:
 
     def modify_event(self, args):
         self.load_events("events")
+        self.load_events("finished")
         print(f"Modifying event with title: {args.title} and date: {args.date}")
         for event in self.events:
             if event.title == args.title and event.date == args.date:
